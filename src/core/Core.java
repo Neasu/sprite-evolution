@@ -2,7 +2,6 @@ package core;
 
 public class Core
 {
-
 	public static void main(String[] args)
 	{
 		Program prog = new Program(args);
