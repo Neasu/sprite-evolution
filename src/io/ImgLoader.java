@@ -10,50 +10,59 @@ import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 
+import core.Image;
+import core.Program;
+
+
 public class ImgLoader
 {
 	// Variables
 	// Constructors
 	// Methods
-	public static BufferedImage[] loadImageSet(File[] paths) throws IOException
+	public static Image[] loadImageSet(File[] paths) throws Exception
 	{
-		System.out.println("Loading " + paths.length + "images");
+		Program.LOGGER.info("Loading " + paths.length + " images");
 		
-		BufferedImage[] imgs = new BufferedImage[paths.length];
+		Image[] imgs = new Image[paths.length];
 		
 		try
 		{
 			for(int i = 0; i < paths.length; i++)
 			{
 				imgs[i] = loadImage(paths[i]);
+				
+				if(i > 0 && (imgs[i].getImage().getHeight() != imgs[i-1].getImage().getHeight() || imgs[i].getImage().getWidth() != imgs[i-1].getImage().getWidth()))
+				{
+					throw new Exception("Images with different resolutions detected.");
+				}
 			}
 		}
-		catch(IOException ioe)
+		catch(Exception e)
 		{
-			throw ioe;
+			Program.LOGGER.severe("The loading failed due to: " + e.getMessage());
+			throw e;
 		}
 		
-		System.out.println("The loading of " + paths.length + " has been successfull");
+		Program.LOGGER.info("The loading of " + paths.length + " images has been successfull");
 		
 		return imgs;
 	}
 	
-	public static BufferedImage loadImage(File path) throws IOException
+	public static Image loadImage(File path) throws IOException
 	{
-		BufferedImage img = null;
+		Image img = null;
 		
 		try
 		{
-			img = ImageIO.read(path);	
+			img = new Image(ImageIO.read(path));	
 		}
 		catch(IOException ioe)
 		{
-			// TODO
-			System.out.println("Image couldn't been loaded: " + path.getName() + " due to " + ioe.getMessage());
+			Program.LOGGER.warning("Image couldn't been loaded: " + path.getName() + " due to " + ioe.getMessage());
 			throw ioe;
 		}
 		
-		System.out.println("Image loaded: " + path.getName());
+		Program.LOGGER.info("Image loaded: " + path.getName());
 		
 		return img;
 	}
@@ -71,10 +80,13 @@ public class ImgLoader
 		}
 		catch(IOException e)
 		{
-			System.out.println("Could not load files due to: " + e.getMessage());
-			throw new IOException(e);
+			Program.LOGGER.severe("Could not scan directory due to: " + e.getMessage());
+			throw e;
 		}
 		
-		return (File[]) foundFiles.toArray();
+		File[] files = new File[foundFiles.size()];
+		foundFiles.toArray(files);
+		
+		return files;
 	}
 }
