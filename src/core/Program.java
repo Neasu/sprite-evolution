@@ -114,22 +114,6 @@ public class Program
 
 	private void parseArgs(String[] args)
 	{
-		// TODO
-		if (args.length == 0)
-		{
-			// TODO only for testing
-			args = new String[6];
-
-			args[0] = "--source";
-			args[1] = "E:\\Desktop\\testicons";
-
-			args[2] = "--destination";
-			args[3] = "E:\\Desktop";
-
-			args[4] = "--logfilepath";
-			args[5] = "E:\\Desktop\\abc.txt";
-		}
-
 		/*
 		 * Parse command-line arguments
 		 */
