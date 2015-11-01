@@ -7,7 +7,7 @@ public class Core
 		Program prog = new Program(args);
 		System.out.println("Program exit with: " + parseExitCode(prog.run()));
 	}
-	
+
 	public static String parseExitCode(int code)
 	{
 		// TODO

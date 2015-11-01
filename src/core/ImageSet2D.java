@@ -1,58 +1,184 @@
 package core;
 
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.util.Arrays;
+
 public class ImageSet2D
 {
 	// Variables
-	private Image[][] set = null;
-	
+	private Image[]	images		= null;
+	private int[][]	positions	= null;
+
 	// Constructors
 	public ImageSet2D(Image[] images, int columns)
 	{
 		initialize(images, columns);
 	}
-	
-	public ImageSet2D(Image[][] images)
+
+	public ImageSet2D(Image[] images, int[][] positions)
 	{
-		initialize(images);
+		initialize(images, positions);
 	}
-	
+
 	// Methods
 	private void initialize(Image[] images, int columns)
 	{
-		Image[][] tempImages = new Image[(images.length % 2 == 0?(images.length / columns):(images.length / columns + 1))][columns];
-		initialize(tempImages);
+		int imageCount = images.length;
+		int rows = (imageCount % 2 == 0 ? (imageCount / columns) : (imageCount / columns + 1));
+
+		int[][] tempPositions = new int[rows][columns];
+
+		// Fill positions with no image value -1
+		for (int[] i : tempPositions)
+		{
+			Arrays.fill(i, -1);
+		}
+
+		for (int i = 0; i < imageCount; i++)
+		{
+			int x = i % columns;
+			int y = (int) i / columns;
+
+			tempPositions[y][x] = i;
+		}
+		
+		initialize(images, tempPositions);
 	}
-	
-	private void initialize(Image[][] images)
+
+	private void initialize(Image[] images, int[][] positions)
 	{
-		this.set = images.clone();
+		this.images = images;
+		this.positions = positions.clone();
 	}
-	
+
 	public void swapImage(int ax, int ay, int bx, int by)
 	{
-		if(!(ax == bx && ay == by) && ax >= 0 && ax <= set.length && ay >= 0 && ay <= set[0].length && bx >= 0 && bx <= set.length && by >= 0 && by <= set[0].length) // If not equal and in boundaries
+		if (!(ax == bx && ay == by) && ax >= 0 && ax <= getWidth() && ay >= 0 && ay <= getHeight() && bx >= 0 && bx <= getWidth() && by >= 0 && by <= getHeight()) // If
+																																									// not
+																																									// equal
+																																									// and
+																																									// in
+																																									// boundaries
 		{
-			Image buffer = getImage(ax, ay);
-			setImage(ax, ay, getImage(bx, by));
-			setImage(bx, by, buffer);
+			int buffer = getPartImageIndex(ax, ay);
+			setImageIndex(ax, ay, getPartImageIndex(bx, by));
+			setImageIndex(bx, by, buffer);
 		}
-		
+
 		return;
 	}
-	
-	public Image getImage(int x, int y)
+
+	public BufferedImage getFullImage()
 	{
-		return set[x][y];
+		int imageWidth = images[0].getImage().getWidth(); // width and height of part images
+		int columns = getWidth();
+		int rows = getHeight();
+
+		BufferedImage result = new BufferedImage(imageWidth * columns, imageWidth * rows, BufferedImage.TYPE_INT_ARGB);
+
+		Graphics g = result.getGraphics();
+
+		for (int x = 0; x < columns; x++)
+		{
+			for (int y = 0; y < rows; y++)
+			{
+				if (isImageSet(x, y))
+				{
+					g.drawImage(getPartImage(x, y).getImage(), x * imageWidth, y * imageWidth, null);
+				}
+			}
+		}
+
+		return result;
 	}
 	
+	public int getPartImageIndex(int x, int y)
+	{
+		if (isValidCoordinates(x, y))
+		{
+			return positions[y][x];
+		}
+		return 0;
+	}
+
+	public Image getPartImage(int x, int y)
+	{
+		if (isImageSet(x, y))
+		{
+			return images[positions[y][x]];
+		}
+		return null;
+	}
+
 	private boolean setImage(int x, int y, Image image)
 	{
-		if(x >= 0 && x <= set.length && y >= 0 && y <= set[0].length)
+		if (isValidCoordinates(x, y))
 		{
-			set[x][y] = image;
+			images[positions[y][x]] = image;
 			return true;
 		}
-		
+
 		return false;
+	}
+	
+	private boolean setImageIndex(int x, int y, int index)
+	{
+		if (isValidCoordinates(x, y) && index >= -1)
+		{
+			positions[y][x] = index;
+			return true;
+		}
+
+		return false;
+	}
+	
+	public boolean isImageSet(int x, int y)
+	{
+		if(isValidCoordinates(x, y) && positions[y][x] != -1)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
+	public boolean isValidCoordinates(int x, int y)
+	{
+		if (x >= 0 && x <= getWidth() && y >= 0 && y <= getHeight())
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	public Image[] getImages()
+	{
+		return images;
+	}
+	
+	public int getImageCount()
+	{
+		return images.length;
+	}
+	
+	public int getColumns()
+	{
+		return positions[0].length;
+	}
+
+	public int getWidth()
+	{
+		return positions[0].length;
+	}
+
+	public int getHeight()
+	{
+		return positions.length;
 	}
 }

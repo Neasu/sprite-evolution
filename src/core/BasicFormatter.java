@@ -10,8 +10,6 @@ public class BasicFormatter extends Formatter
 	@Override
 	public String format(LogRecord record)
 	{
-		return "[" + new SimpleDateFormat("dd.MM.yy HH:mm:ss").format(new Date(record.getMillis())) + "][" 
-				+ record.getLevel().getName() + "] "
-				+ record.getMessage() + "\n";
+		return "[" + new SimpleDateFormat("dd.MM.yy HH:mm:ss").format(new Date(record.getMillis())) + "][" + record.getLevel().getName() + "] " + record.getMessage() + "\n";
 	}
 }
