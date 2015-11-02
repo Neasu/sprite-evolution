@@ -33,11 +33,13 @@ public class Program
 
 	private File				sourceDirectory			= null;
 	private File				destinationDirectory	= null;
+	private static File			optimizerPath			= new File("E:\\Desktop\\sprite-evolution test outputs\\utils\\optipng.exe");	// TODO
 	private static File			workingDirectory		= null;
 	private static int			columns					= 0;
 	private static double		mutationRate			= 0.0;
 	private static double		selectionRate			= 0.0;
 	private static int			generationSize			= 0;
+	private static int			maxGenerationCount		= 0;
 
 	private File[]				sourceFiles				= null;
 	private Image[]				sourceImages			= null;
@@ -86,35 +88,44 @@ public class Program
 			return 1;
 		}
 
+		boolean shouldContinue = true;
+
 		ImageSet2D startingSet = new ImageSet2D(sourceImages, columns);
-		int beginningFileSize = ImgLoader.getImageFileSize(startingSet.getFullImage());
 
-		ImgWriter.saveImage(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\startingSet.png"));
-		System.out.println(beginningFileSize);
+		ImgWriter.write(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\startingSet.png"));
 
-		EACore core = new EACore(100, 100, 0.2, 0.2, new EAIndividual(startingSet));
+		EACore core = new EACore(generationSize, maxGenerationCount, mutationRate, selectionRate, new EAIndividual(startingSet));
 
-		int genCount = 1;
-		
-		while(ImgLoader.getImageFileSize(core.getBestIndividual().getData().getFullImage()) > beginningFileSize)
+		do
 		{
-			LOGGER.info(String.format("Generation: %04d %08d -> %08d", genCount + 1, beginningFileSize, ImgLoader.getImageFileSize(core.getBestIndividual().getData().getFullImage())));
+			int genCount = core.getGenerationCount();
 
-			core.evaluate();
+			if (core.evaluate()) // Evaluate / If a better individual, than the current best one, is found
+			{
+				ImgWriter.write(core.getGeneration()[0].getData().getFullImage(),
+						new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)));
+
+				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d | Total best: %08d NEW BEST", genCount, core.getGeneration()[0].getFileSize(),
+						core.getBestIndividual().getFileSize()));
+			}
+			else
+			{
+				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d | Total best: %08d", genCount, core.getGeneration()[0].getFileSize(),
+						core.getBestIndividual().getFileSize()));
+			}
+
 			core.select();
-			core.nextGeneration();
-			
-			genCount++;
-		}
+			core.nextGenerationFromLast();
 
-		int count = 0;
-		for (EAIndividual i : core.getGeneration())
-		{
-			ImgWriter.saveImage(i.getData().getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\" + String.format("%03d.png", count + 1)));
-			count++;
+			if (genCount >= maxGenerationCount)
+			{
+				shouldContinue = false;
+			}
 		}
+		while (shouldContinue);
 
-		ImgWriter.saveImage(core.getBestIndividual().getData().getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\bestIndividual.png"));
+		ImgWriter.write(core.getBestIndividual().getData().getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\sprite-evolution.png"));
+		ImgWriter.writeCSSFile(core.getBestIndividual(), new File(destinationDirectory, "sprite-evolution.css"));
 
 		return 0;
 	}
@@ -333,7 +344,7 @@ public class Program
 			}
 
 		}
-		
+
 		workingDirectory.mkdir();
 
 		/*
@@ -346,6 +357,12 @@ public class Program
 			try
 			{
 				mutationRate = Double.parseDouble(cmd.getOptionValue("mutr"));
+
+				if (mutationRate <= 0.0 || mutationRate > 1.0)
+				{
+					mutationRate = 0.2;
+					throw new Exception();
+				}
 			}
 			catch (Exception e)
 			{
@@ -363,6 +380,11 @@ public class Program
 			try
 			{
 				selectionRate = Double.parseDouble(cmd.getOptionValue("selr"));
+
+				if (selectionRate <= 0.0 || selectionRate > 1.0)
+				{
+					throw new Exception();
+				}
 			}
 			catch (Exception e)
 			{
@@ -380,6 +402,12 @@ public class Program
 			try
 			{
 				generationSize = Integer.parseInt(cmd.getOptionValue("gens"));
+
+				if (generationSize <= 0)
+				{
+					generationSize = 100;
+					throw new Exception();
+				}
 			}
 			catch (Exception e)
 			{
@@ -387,6 +415,29 @@ public class Program
 			}
 		}
 
+		/*
+		 * Validating max generation count
+		 */
+
+		maxGenerationCount = 500;
+
+		if (cmd.hasOption("mgc"))
+		{
+			try
+			{
+				maxGenerationCount = Integer.parseInt(cmd.getOptionValue("mgc"));
+
+				if (maxGenerationCount <= 0)
+				{
+					maxGenerationCount = 500;
+					throw new Exception();
+				}
+			}
+			catch (Exception e)
+			{
+				// TODO: handle exception
+			}
+		}
 	}
 
 	private void createOptions() // Create the list of available command-line options
@@ -419,6 +470,9 @@ public class Program
 		options.addOption(Option.builder("gens").longOpt("generationsize").desc("The size of a generation. Standard: Number of input images if not bigger than 100.").argName("GenerationSize")
 				.hasArg().build());
 
+		options.addOption(Option.builder("mgc").longOpt("maxgenerationcount").desc("The when thios number of generations is reached the algorithem will terminate. Standard: 500")
+				.argName("MaxGenerationCount").hasArg().build());
+
 	}
 
 	public static File getWorkingDirectory()
@@ -444,6 +498,11 @@ public class Program
 	public static int getGenerationSize()
 	{
 		return generationSize;
+	}
+
+	public static File getOptimizerPath()
+	{
+		return optimizerPath;
 	}
 
 }

@@ -3,23 +3,31 @@ package algorithm;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Random;
 
 import com.sun.xml.internal.ws.assembler.jaxws.MustUnderstandTubeFactory;
+
+import io.ImgLoader;
 
 public class EACore
 {
 	// Variables
 
 	// Config
-	private int		generationSize		= 0;
-	private double	selectionPercentage	= 0.0;
-	private long	generationCount		= 0;
-	private long	maxGenerationCount	= 0;
-	private double	mutationRate		= 0.0;
+	private int						generationSize		= 0;
+	private double					selectionPercentage	= 0.0;
+	private int						generationCount		= 0;
+	private int						maxGenerationCount	= 0;
+	private double					mutationRate		= 0.0;
 
-	private ArrayList<EAIndividual>	generation		= null;
-	private EAIndividual			individualZ		= null;
-	private EAIndividual			bestIndividual	= null;
+	private ArrayList<EAIndividual>	generation			= null;
+	private ArrayList<EAIndividual>	knownIndividuals	= null;
+
+	private EAIndividual			individualZ			= null;
+	private EAIndividual			bestIndividual		= null;
+
+	private static Random			rand				= null;
 
 	// Constructors
 	/**
@@ -30,13 +38,13 @@ public class EACore
 	 * @param selectionPercentage
 	 * @param individualZ
 	 */
-	public EACore(int generationSize, long maxGenerationCount, double mutationRate, double selectionPercentage, EAIndividual individualZ)
+	public EACore(int generationSize, int maxGenerationCount, double mutationRate, double selectionPercentage, EAIndividual individualZ)
 	{
 		initialize(generationSize, selectionPercentage, maxGenerationCount, mutationRate, individualZ);
 	}
 
 	// Methods
-	private void initialize(int generationSize, double selectionPercentage, long maxGenerationCount, double mutationRate, EAIndividual individualZ)
+	private void initialize(int generationSize, double selectionPercentage, int maxGenerationCount, double mutationRate, EAIndividual individualZ)
 	{
 		this.generationSize = generationSize;
 		this.selectionPercentage = selectionPercentage;
@@ -44,15 +52,26 @@ public class EACore
 		this.maxGenerationCount = maxGenerationCount;
 		this.mutationRate = mutationRate;
 
+		rand = new Random(Calendar.getInstance().getTimeInMillis());
+
+		this.knownIndividuals = new ArrayList<EAIndividual>();
+
 		// Initialize and evaluate
-		this.generation = new ArrayList<EAIndividual>(Arrays.asList(EACore.createGeneration(generationSize, 1.0, individualZ)));
-		this.generation.sort(new EAIndividualComperator());
-		this.bestIndividual = this.generation.get(0);
-		
-		evaluate();
+
+		// this.generation = new ArrayList<EAIndividual>();
+		// this.generation.add(getIndividualZ());
+		// getIndividualZ().setFileSize(ImgLoader.getImageFileSize(getIndividualZ().getData().getFullImage()));
+		// this.bestIndividual = getIndividualZ();
+		//
+		this.bestIndividual = getIndividualZ();
+		this.generation = new ArrayList<EAIndividual>(Arrays.asList(createGeneration(generationSize, mutationRate, individualZ))); // Generate
+																																	// first
+																																	// generation
+																																	// from
+																																	// individualZ
 	}
 
-	public void evaluate()
+	public boolean evaluate()
 	{
 		for (EAIndividual i : generation)
 		{
@@ -61,6 +80,11 @@ public class EACore
 				BufferedImage img = i.getData().getFullImage();
 				int filesize = io.ImgLoader.getImageFileSize(img);
 				i.setFileSize(filesize);
+
+				if (bestIndividual != null && bestIndividual.getFileSize() < i.getFileSize())
+				{
+					knownIndividuals.add(i);
+				}
 			}
 			catch (Exception e)
 			{
@@ -71,9 +95,14 @@ public class EACore
 
 		generation.sort(new EAIndividualComperator());
 
-		if (bestIndividual.getFileSize() > generation.get(0).getFileSize())
+		if (bestIndividual == null || bestIndividual.getFileSize() == 0 || bestIndividual.getFileSize() > generation.get(0).getFileSize())
 		{
 			bestIndividual = generation.get(0);
+			return true;
+		}
+		else
+		{
+			return false;
 		}
 	}
 
@@ -90,39 +119,62 @@ public class EACore
 		}
 	}
 
-	public void nextGeneration()
+	public void nextGenerationFromLast()
 	{
 		EAIndividual[] nextGen = createGeneration(generationSize, mutationRate, generation);
 		generation = new ArrayList<EAIndividual>(Arrays.asList(nextGen));
 		generationCount++;
 	}
 
+	public void nextGenerationFromBest()
+	{
+		generation = new ArrayList<EAIndividual>(Arrays.asList(createGeneration(generationSize, mutationRate, getBestIndividual())));
+		generationCount++;
+	}
+
 	// Statics
-	public static EAIndividual mutate(EAIndividual individual, double mutationRate)
+	public EAIndividual mutate(EAIndividual individual, double mutationRate)
 	{
 		EAIndividual result = individual.getCopy();
-		
+
 		int width = result.getData().getWidth();
 		int height = result.getData().getHeight();
 
-		int possibleOperations = (int) (Math.pow(width * height, 2) * 0.5 + 0.5); // The possible number of operations to execute
-		int operationsToExecute = (int) (possibleOperations * mutationRate + 0.5); // Number of changing operations to execute based on the possible number of operations to execute and the mutation rate
-		
-		for(int i = 0; i < operationsToExecute; i++)
+		int operationsToExecute = (int) ((((width * height) * 0.5) * mutationRate));
+
+		if (operationsToExecute < 1)
 		{
-			int x1 = 0 + (int)(Math.random() * (width - 0  + 0));
-			int y1 = 0 + (int)(Math.random() * (height - 0 + 0));
-			
-			int x2 = 0 + (int)(Math.random() * (width - 0 + 0));
-			int y2 = 0 + (int)(Math.random() * (height - 0 + 0));
-			
+			operationsToExecute = 1;
+		}
+
+		for (int i = 0; i < operationsToExecute; i++)
+		{
+			int x1 = 0;
+			int y1 = 0;
+
+			int x2 = 0;
+			int y2 = 0;
+
+			while (x1 == x2 && y1 == y2)
+			{
+				x1 = EACore.rand.nextInt(width);
+				y1 = EACore.rand.nextInt(height);
+				x2 = EACore.rand.nextInt(width);
+				y2 = EACore.rand.nextInt(height);
+			}
+
 			result.getData().swapImage(x1, y1, x2, y2);
+		}
+
+		if (isindividualKnown(result))
+		{
+			return mutate(individual, mutationRate);
 		}
 
 		return result;
 	}
 
-	public static EAIndividual[] createGeneration(int generationSize, double mutationRate, EAIndividual individualZ)
+	public EAIndividual[] createGeneration(int generationSize, double mutationRate, EAIndividual individualZ)
 	{
 		if (generationSize < 0 || individualZ == null)
 		{
@@ -133,7 +185,7 @@ public class EACore
 
 		for (int i = 0; i < generationSize; i++)
 		{
-			newIndividuals[i] = EACore.mutate(individualZ, mutationRate); // Mutate the starting individual with 100%
+			newIndividuals[i] = mutate(individualZ, mutationRate); // Mutate the starting individual
 		}
 
 		return newIndividuals;
@@ -152,7 +204,7 @@ public class EACore
 	 *            The parent generation
 	 * @return A new generation with the given size, generated from the parent generation
 	 */
-	public static EAIndividual[] createGeneration(int generationSize, double mutationRate, ArrayList<EAIndividual> generation)
+	public EAIndividual[] createGeneration(int generationSize, double mutationRate, ArrayList<EAIndividual> generation)
 	{
 		EAIndividual[] result = new EAIndividual[generationSize];
 
@@ -168,13 +220,16 @@ public class EACore
 			int resultCursor = 0;
 			for (int i = 0; i < generation.size(); i++)
 			{
-				double qualityRelation = (1.0 / overallQuality) * generation.get(i).getFileSize(); // The relation of the quality
-																									// of this individual to the
-																									// sum of qualities
-				double slotRelation = 1 + 1 - (1.0 / generationSize) * generation.size();
-				int slots = (int) ((generationSize * qualityRelation) * slotRelation + 0.5); // The number of children this individual in going
-																				// to have, based on its relative quality (at
-																				// least one)
+				int slots = (int) (generationSize / generation.size() + 0.5);
+
+				if (overallQuality > 0)
+				{
+					double qualityRelation = 1.0;
+					qualityRelation = (1.0 / overallQuality) * generation.get(i).getFileSize();
+
+					double slotRelation = 1 + 1 - (1.0 / generationSize) * generation.size();
+					slots = (int) ((generationSize * qualityRelation) * slotRelation + 0.5);
+				}
 
 				if (slots == 0)
 				{
@@ -189,7 +244,7 @@ public class EACore
 						break;
 					}
 
-					result[j + resultCursor] = EACore.mutate(generation.get(i), mutationRate);
+					result[j + resultCursor] = mutate(generation.get(i), mutationRate);
 				}
 
 				resultCursor += j; // Increase the position by 1 so the last children of this parent will not be overwritten by
@@ -198,13 +253,39 @@ public class EACore
 		}
 		else
 		{
-			for(int i = 0; i < generationSize; i++)
+			for (int i = 0; i < generationSize; i++)
 			{
-				result[i] = EACore.mutate(generation.get(i), mutationRate);
+				result[i] = mutate(generation.get(i), mutationRate);
 			}
 		}
 
 		return result;
+	}
+
+	private void wipeGeneration()
+	{
+		for (int i = 0; i < generation.size(); i++)
+		{
+			generation.remove(i);
+		}
+	}
+
+	private boolean isindividualKnown(EAIndividual o)
+	{
+		if (o == null || generation == null || generation.get(0) == null)
+		{
+			return false;
+		}
+
+		for (EAIndividual eaIndividual : knownIndividuals)
+		{
+			if (eaIndividual.getData().isEqual(o.getData()))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	// Getters & Setters
@@ -223,22 +304,22 @@ public class EACore
 		return generationSize;
 	}
 
-	public long getMaxGenerationCount()
+	public int getMaxGenerationCount()
 	{
 		return maxGenerationCount;
 	}
 
-	public long getGenerationCount()
+	public int getGenerationCount()
 	{
 		return generationCount;
 	}
-	
+
 	public EAIndividual[] getGeneration()
 	{
 		EAIndividual[] result = new EAIndividual[generation.size()];
-		
+
 		generation.toArray(result);
-		
+
 		return result;
 	}
 

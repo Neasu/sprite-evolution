@@ -4,6 +4,8 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
+import com.sun.media.jfxmedia.logging.Logger;
+
 public class ImageSet2D
 {
 	// Variables
@@ -25,7 +27,16 @@ public class ImageSet2D
 	private void initialize(Image[] images, int columns)
 	{
 		int imageCount = images.length;
-		int rows = (imageCount % 2 == 0 ? (imageCount / columns) : (imageCount / columns + 1));
+		int rows = 0;
+		
+		if(imageCount % 2 == 0)
+		{
+			rows = (int) (imageCount / columns + 1 + 0.5);
+		}
+		else
+		{
+			rows = (int) (imageCount / columns + 1 + 0.5);
+		}
 
 		int[][] tempPositions = new int[rows][columns];
 
@@ -65,6 +76,10 @@ public class ImageSet2D
 			setImageIndex(ax, ay, getPartImageIndex(bx, by));
 			setImageIndex(bx, by, buffer);
 		}
+		else
+		{
+			Program.LOGGER.warning("Swapping of images failed! A("+ax+";"+ay+") B("+bx+";"+by+")");
+		}
 
 		return;
 	}
@@ -91,6 +106,27 @@ public class ImageSet2D
 		}
 
 		return result;
+	}
+	
+	public boolean isEqual(ImageSet2D o)
+	{	
+		if(o == null || o.getWidth() != getWidth() || o.getHeight() != getHeight())
+		{
+			return false;
+		}
+		
+		for(int i = 0; i < getWidth(); i++)
+		{
+			for(int j = 0; j < getHeight(); j++)
+			{
+				if(o.getPartImageIndex(i, j) != getPartImageIndex(i, j))
+				{
+					return false;
+				}
+			}
+		}
+		
+		return true;
 	}
 	
 	public int getPartImageIndex(int x, int y)

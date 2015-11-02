@@ -1,20 +1,13 @@
 package io;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 import javax.imageio.ImageIO;
 
@@ -69,7 +62,7 @@ public class ImgLoader
 
 		try
 		{
-			img = new Image(ImageIO.read(path));
+			img = new Image(ImageIO.read(path), path.getName());
 		}
 		catch (IOException ioe)
 		{
@@ -77,7 +70,7 @@ public class ImgLoader
 			throw ioe;
 		}
 
-		Program.LOGGER.fine("Image loaded: " + path.getName() + " File size: " + ImgLoader.getImageFileSize(img.getImage()));
+		Program.LOGGER.fine("Image loaded: " + path.getName());
 
 		return img;
 	}
@@ -104,47 +97,40 @@ public class ImgLoader
 
 		return files;
 	}
+	
+	public static int getImageFileSizeNonOptimized(BufferedImage image)
+	{
+		BufferedImage img = image;
+		int size = 0;
+		
+		try(ByteArrayOutputStream tmp = new ByteArrayOutputStream())
+		{
+		    ImageIO.write(img, "png", tmp);
+		    size = tmp.size();
+		}
+		catch(Exception e)
+		{
+			// TODO
+		}
+		
+		return size; 
+	}
 
 
 	public static int getImageFileSize(BufferedImage image)
 		{
-			BufferedImage img = image;
-			File workingDirectory = Program.getWorkingDirectory();
-			File a = new File(workingDirectory, "a.png");
-			File prog = new File("E:\\Desktop\\sprite-evolution test outputs\\utils");
-			
+			File tempFile = new File(Program.getWorkingDirectory(), "a.png");
 		    int size = 0;
-	
 		    try
 			{
-				ImageIO.write(img, "png", a);
-				
-				//String[] cmd = {"E:\\Desktop\\sprite-evolution test outputs\\utils\\pngcrush_1_7_87_w64.exe", "-reduce", "-rem allb",  "-force " + a.getAbsolutePath() + " " + b.getAbsolutePath()};
-				String cmd = "E:\\Desktop\\sprite-evolution test outputs\\utils\\optipng.exe -force " + a.getAbsolutePath();
-				
-				Process p = Runtime.getRuntime().exec(cmd);
-				
-				p.waitFor();
+				ImgWriter.writeOptimized(image, tempFile);
 	
-				size = (int) a.length();
-				
+				size = (int) tempFile.length();
 			}
 			catch (Exception e)
 			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Program.LOGGER.warning("Calculating of optimized image file size failed due to: " + e.getMessage());
 			}
-		    
-		    
-	//		try(ByteArrayOutputStream tmp = new ByteArrayOutputStream())
-	//		{
-	//		    ImageIO.write(img, "png", tmp);
-	//		    contentLength = tmp.size();
-	//		}
-	//		catch(Exception e)
-	//		{
-	//			// TODO
-	//		}
 		    
 		    return size;
 		}
