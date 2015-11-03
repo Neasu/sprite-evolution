@@ -33,13 +33,18 @@ public class Program
 
 	private File				sourceDirectory			= null;
 	private File				destinationDirectory	= null;
-	private static File			optimizerPath			= new File("E:\\Desktop\\sprite-evolution test outputs\\utils\\optipng.exe");	// TODO
+	private static File			optimizerPath			= null;
 	private static File			workingDirectory		= null;
+
 	private static int			columns					= 0;
-	private static double		mutationRate			= 0.0;
-	private static double		selectionRate			= 0.0;
 	private static int			generationSize			= 0;
 	private static int			maxGenerationCount		= 0;
+
+	private static double		mutationRate			= 0.0;
+	private static double		selectionRate			= 0.0;
+	private static double		mutationChance			= 0.0;
+	private static double		macroMutationChance		= 0.0;
+	private static double		macroMutationRate		= 0.0;
 
 	private File[]				sourceFiles				= null;
 	private Image[]				sourceImages			= null;
@@ -63,7 +68,7 @@ public class Program
 
 		// Parse console arguments
 		createOptions();
-		parseArgs(args);
+		isInitializedProperly = parseArgs(args);
 
 		/*
 		 * Load images
@@ -74,11 +79,17 @@ public class Program
 		}
 		catch (Exception e)
 		{
-			// TODO
+			isInitializedProperly = false;
 		}
-
-		isInitializedProperly = true;
-		LOGGER.info("The program has been successfully initialized.");
+		
+		if (isInitializedProperly)
+		{
+			LOGGER.info("The program has been successfully initialized.");
+		}
+		else
+		{
+			LOGGER.warning("The program has not been successfully initialized.");
+		}
 	}
 
 	public int run()
@@ -88,22 +99,23 @@ public class Program
 			return 1;
 		}
 
-		boolean shouldContinue = true;
-
 		ImageSet2D startingSet = new ImageSet2D(sourceImages, columns);
+		ImgWriter.writeOptimized(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\startingSet.png"), 6);
+		
+		LOGGER.info("Size of starting set: " + String.format("%08d", ImgLoader.getImageFileSize(startingSet.getFullImage())));
+		
+		EACore core = new EACore(generationSize, maxGenerationCount, mutationRate, mutationChance, selectionRate, macroMutationChance, macroMutationRate, new EAIndividual(startingSet));
 
-		ImgWriter.write(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\startingSet.png"));
-
-		EACore core = new EACore(generationSize, maxGenerationCount, mutationRate, selectionRate, new EAIndividual(startingSet));
-
+		boolean shouldContinue = true;
+		
 		do
 		{
 			int genCount = core.getGenerationCount();
 
 			if (core.evaluate()) // Evaluate / If a better individual, than the current best one, is found
 			{
-				ImgWriter.write(core.getGeneration()[0].getData().getFullImage(),
-						new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)));
+				ImgWriter.writeOptimized(core.getGeneration()[0].getData().getFullImage(),
+						new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)), 6);
 
 				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d | Total best: %08d NEW BEST", genCount, core.getGeneration()[0].getFileSize(),
 						core.getBestIndividual().getFileSize()));
@@ -124,13 +136,13 @@ public class Program
 		}
 		while (shouldContinue);
 
-		ImgWriter.write(core.getBestIndividual().getData().getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\sprite-evolution.png"));
+		ImgWriter.writeOptimized(core.getBestIndividual().getData().getFullImage(), new File(destinationDirectory.getAbsolutePath() + "\\sprite-evolution.png"), 6);
 		ImgWriter.writeCSSFile(core.getBestIndividual(), new File(destinationDirectory, "sprite-evolution.css"));
 
 		return 0;
 	}
 
-	private void parseArgs(String[] args)
+	private boolean parseArgs(String[] args)
 	{
 		/*
 		 * Parse command-line arguments
@@ -150,7 +162,7 @@ public class Program
 
 			HelpFormatter formatter = new HelpFormatter();
 			formatter.printHelp("java -jar sprite-evolution.jar", header, options, footer, true);
-			return;
+			return false;
 		}
 
 		/*
@@ -228,7 +240,7 @@ public class Program
 			catch (IOException ioe)
 			{
 				ioe.printStackTrace();
-				return;
+				return false;
 			}
 		}
 
@@ -263,7 +275,7 @@ public class Program
 		catch (Exception e)
 		{
 			LOGGER.severe("Scanning directory failed. Exiting.");
-			return;
+			return false;
 		}
 
 		LOGGER.info("Source directory has been scanned successfully. " + sourceFiles.length + " files found.");
@@ -346,17 +358,46 @@ public class Program
 		}
 
 		workingDirectory.mkdir();
+		
+		/*
+		 * OptimizerPath
+		 */
+		
+		optimizerPath = new File("optipng.exe");
+		
+		if (cmd.hasOption("op"))
+		{
+			try
+			{
+				File dir = new File(cmd.getOptionValue("op"));
+
+				if (!dir.isFile())
+				{
+					throw new Exception();
+				}
+				else
+				{
+					optimizerPath = dir;
+				}
+			}
+			catch (Exception e)
+			{
+				LOGGER.warning("Optimizer path is invalid.");
+				return false;
+			}
+
+		}
 
 		/*
 		 * Validating mutation rate
 		 */
 		mutationRate = 0.2;
 
-		if (cmd.hasOption("mutr"))
+		if (cmd.hasOption("mutrat"))
 		{
 			try
 			{
-				mutationRate = Double.parseDouble(cmd.getOptionValue("mutr"));
+				mutationRate = Double.parseDouble(cmd.getOptionValue("mutrat"));
 
 				if (mutationRate <= 0.0 || mutationRate > 1.0)
 				{
@@ -419,7 +460,7 @@ public class Program
 		 * Validating max generation count
 		 */
 
-		maxGenerationCount = 500;
+		maxGenerationCount = 256;
 
 		if (cmd.hasOption("mgc"))
 		{
@@ -429,15 +470,86 @@ public class Program
 
 				if (maxGenerationCount <= 0)
 				{
-					maxGenerationCount = 500;
+					maxGenerationCount = 256;
 					throw new Exception();
 				}
 			}
 			catch (Exception e)
 			{
-				// TODO: handle exception
+				LOGGER.warning("Maximum generation count is invalid! Standard is used!");
 			}
 		}
+
+		/**
+		 * Validating mutationChance
+		 */
+		mutationChance = 0.3;
+
+		if (cmd.hasOption("mutcha"))
+		{
+			try
+			{
+				mutationChance = Double.parseDouble(cmd.getOptionValue("mutcha"));
+
+				if (mutationChance <= 0.0 || mutationChance > 1.0)
+				{
+					mutationChance = 0.3;
+					throw new Exception();
+				}
+			}
+			catch (Exception e)
+			{
+				LOGGER.warning("MutationChance is invalid. Using standard of 0.01");
+			}
+		}
+		
+		/**
+		 * Validating macroMutationChance
+		 */
+		macroMutationChance = 0.01;
+
+		if (cmd.hasOption("macmutcha"))
+		{
+			try
+			{
+				macroMutationChance = Double.parseDouble(cmd.getOptionValue("macmutcha"));
+
+				if (macroMutationChance <= 0.0 || macroMutationChance > 1.0)
+				{
+					macroMutationChance = 0.01;
+					throw new Exception();
+				}
+			}
+			catch (Exception e)
+			{
+				LOGGER.warning("MacroMutationChance is invalid. Using standard of 0.01");
+			}
+		}
+		
+		/**
+		 * Validating macroMutationRate
+		 */
+		macroMutationRate = 0.1;
+
+		if (cmd.hasOption("macmutcha"))
+		{
+			try
+			{
+				macroMutationRate = Double.parseDouble(cmd.getOptionValue("macmutrat"));
+
+				if (macroMutationRate <= 0.0 || macroMutationRate > 1.0)
+				{
+					macroMutationRate = 0.1;
+					throw new Exception();
+				}
+			}
+			catch (Exception e)
+			{
+				LOGGER.warning("MacroMutationRate is invalid. Using standard of 0.01");
+			}
+		}
+		
+		return true;
 	}
 
 	private void createOptions() // Create the list of available command-line options
@@ -450,6 +562,8 @@ public class Program
 
 		options.addOption(Option.builder("wd").longOpt("workingdir").desc("The directory to save temporary files to. Standard: The systems temp directory.").argName("WorkingDirectory")
 				.hasArg().build());
+		
+		options.addOption(Option.builder("op").longOpt("optimizerpath").desc("The path to the optipng.exe").argName("OptimizerPath").hasArg().build());
 
 		options.addOption(
 				Option.builder("ll").longOpt("loglevel").desc("The loglevel to output. Possible: off, severe, warning, info, all Standard: all").argName("LogLevel").hasArg().build());
@@ -461,8 +575,8 @@ public class Program
 		options.addOption(
 				Option.builder("c").longOpt("columns").desc("The number of columns").desc("The number of columns the resulting sprite should have.").argName("Columns").hasArg().build());
 
-		options.addOption(Option.builder("mutr").longOpt("mutationrate").desc("The rate of mutation from generation to generation. Float > 0.0 & <= 1.0. Standard: 0.2").argName("MutationRate")
-				.hasArg().build());
+		options.addOption(Option.builder("mutrat").longOpt("mutationrate").desc("The rate of mutation from generation to generation. Float > 0.0 & <= 1.0. Standard: 0.2")
+				.argName("MutationRate").hasArg().build());
 
 		options.addOption(Option.builder("selr").longOpt("selectionrate").desc("The rate of selection from generation to generation. Float > 0.0 & <= 1.0. Standard: 0.2")
 				.argName("SelectionRate").hasArg().build());
@@ -470,8 +584,16 @@ public class Program
 		options.addOption(Option.builder("gens").longOpt("generationsize").desc("The size of a generation. Standard: Number of input images if not bigger than 100.").argName("GenerationSize")
 				.hasArg().build());
 
-		options.addOption(Option.builder("mgc").longOpt("maxgenerationcount").desc("The when thios number of generations is reached the algorithem will terminate. Standard: 500")
+		options.addOption(Option.builder("mgc").longOpt("maxgenerationcount").desc("The when this number of generations is reached the algorithem will terminate. Standard: 256")
 				.argName("MaxGenerationCount").hasArg().build());
+
+		options.addOption(Option.builder("mutcha").longOpt("mutationchance").desc("The chance of an individual to mutate. Standard: 0.3").hasArg().argName("MutationChance").build());
+
+		options.addOption(
+				Option.builder("macmutcha").longOpt("macromutationchance").desc("The chance of an individual to macro mutate. Standard: 0.01").hasArg().argName("MacroMutationChance").build());
+
+		options.addOption(
+				Option.builder("macmutrat").longOpt("macromutationrate").desc("The rate of a macro mutation from generation to generation. Standard: 0.1").hasArg().argName("MacroMutationRate").build());
 
 	}
 

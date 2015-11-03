@@ -83,6 +83,23 @@ public class ImageSet2D
 
 		return;
 	}
+	
+	public void swapRow(int ay, int by)
+	{
+		if((ay == by) || ay < 0 || ay >= getHeight() || by < 0 || by >= getHeight())
+		{
+			Program.LOGGER.warning("Swapping of rows failed! Row A: " + ay + " Row B: " + by);
+		}
+		else
+		{
+			for(int i = 0; i < getWidth(); i++)
+			{
+				swapImage(i, ay, i, by);
+			}
+		}
+		
+		return;
+	}
 
 	public BufferedImage getFullImage()
 	{
@@ -131,7 +148,7 @@ public class ImageSet2D
 	
 	public int getPartImageIndex(int x, int y)
 	{
-		if (isValidCoordinates(x, y))
+		if (areCoordinatesValid(x, y))
 		{
 			return positions[y][x];
 		}
@@ -149,7 +166,7 @@ public class ImageSet2D
 
 	private boolean setImage(int x, int y, Image image)
 	{
-		if (isValidCoordinates(x, y))
+		if (areCoordinatesValid(x, y))
 		{
 			images[positions[y][x]] = image;
 			return true;
@@ -160,7 +177,7 @@ public class ImageSet2D
 	
 	private boolean setImageIndex(int x, int y, int index)
 	{
-		if (isValidCoordinates(x, y) && index >= -1)
+		if (areCoordinatesValid(x, y) && index >= -1)
 		{
 			positions[y][x] = index;
 			return true;
@@ -171,7 +188,7 @@ public class ImageSet2D
 	
 	public boolean isImageSet(int x, int y)
 	{
-		if(isValidCoordinates(x, y) && positions[y][x] != -1)
+		if(areCoordinatesValid(x, y) && positions[y][x] != -1)
 		{
 			return true;
 		}
@@ -181,7 +198,7 @@ public class ImageSet2D
 		}
 	}
 	
-	public boolean isValidCoordinates(int x, int y)
+	public boolean areCoordinatesValid(int x, int y)
 	{
 		if (x >= 0 && x <= getWidth() && y >= 0 && y <= getHeight())
 		{

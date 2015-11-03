@@ -36,13 +36,23 @@ public class ImgWriter
 
 	public static void writeOptimized(BufferedImage image, File path)
 	{
+		writeOptimized(image, path, 2);
+	}
+	
+	public static void writeOptimized(BufferedImage image, File path, int level)
+	{
+		if(level < 1 || level > 6)
+		{
+			level = 2;
+		}
+		
 		File optimizerPath = Program.getOptimizerPath();
 
 		try
 		{
 			ImageIO.write(image, "png", path);
 
-			Process p = Runtime.getRuntime().exec(optimizerPath.getAbsolutePath() + " -o2 " + path.getAbsolutePath());
+			Process p = Runtime.getRuntime().exec(optimizerPath.getAbsolutePath() + " -o" + level + " " + path.getAbsolutePath());
 			p.waitFor();
 
 		}

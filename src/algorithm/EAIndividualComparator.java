@@ -2,7 +2,7 @@ package algorithm;
 
 import java.util.Comparator;
 
-public class EAIndividualComperator implements Comparator<EAIndividual>
+public class EAIndividualComparator implements Comparator<EAIndividual>
 {
 	@Override
 	public int compare(EAIndividual o1, EAIndividual o2)
