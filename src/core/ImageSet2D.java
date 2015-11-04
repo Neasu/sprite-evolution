@@ -4,6 +4,7 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
+import com.sun.corba.se.spi.orbutil.fsm.Guard.Result;
 import com.sun.media.jfxmedia.logging.Logger;
 
 public class ImageSet2D
@@ -213,6 +214,20 @@ public class ImageSet2D
 	public Image[] getImages()
 	{
 		return images;
+	}
+	
+	public int[][] getPositions()
+	{
+		int[][] result = new int[positions.length][];
+		
+		for (int i = 0; i < positions.length; i++)
+		{
+			int[] column = positions[i];
+			
+			result[i] = Arrays.copyOf(column, column.length);
+		}
+		
+		return result;
 	}
 	
 	public int getImageCount()

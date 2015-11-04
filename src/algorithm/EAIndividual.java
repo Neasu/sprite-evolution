@@ -22,7 +22,7 @@ public class EAIndividual
 	
 	public EAIndividual getCopy()
 	{
-		return new EAIndividual(new ImageSet2D(data.getImages(), data.getColumns()));
+		return new EAIndividual(new ImageSet2D(data.getImages(), data.getPositions()));
 	}
 	
 	public void setFileSize(int quality)

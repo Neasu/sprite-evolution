@@ -221,7 +221,7 @@ public class EACore
 
 		for (int i = 0; i < generationSize; i++)
 		{
-			newIndividuals[i] = mutate(individualZ); // Mutate the starting individual
+			newIndividuals[i] = mutate(individualZ, 1.0, 1.0, 1.0, 1.0); // Mutate the starting individual
 		}
 
 		return newIndividuals;
@@ -243,7 +243,7 @@ public class EACore
 	public EAIndividual[] createGeneration(int generationSize, double mutationRate, double mutationChance, ArrayList<EAIndividual> generation)
 	{
 		EAIndividual[] result = new EAIndividual[generationSize];
-		int[] overallSlots = new int[generationSize];
+//		int[] overallSlots = new int[generationSize];
 
 		int oldGenSize = generation.size();
 
@@ -254,55 +254,20 @@ public class EACore
 		}
 		if (oldGenSize < generationSize)
 		{
-			int overallFileSize = 0; // The quality of the whole generation (all qualities added up)
-
-			// Calculate overall quality
-			for (EAIndividual i : generation)
-			{
-				overallFileSize += i.getFileSize();
-			}
-
-			// Calculate slots
-			for (int i = 0; i < oldGenSize; i++)
-			{
-				int slots = (int) (generationSize / oldGenSize + 0.5);
-
-				if (overallFileSize > 0)
-				{
-					double qualityRelation = 1.0;
-					qualityRelation = (1.0 / overallFileSize) * generation.get(i).getFileSize();
-
-					double slotRelation = (1.0 / oldGenSize) * generationSize; // 1 + 1 - (1.0 / generationSize) *
-																				// oldGenSize;
-					slots = (int) ((generationSize * qualityRelation) * slotRelation + 0.5);
-				}
-
-				if (slots == 0)
-				{
-					slots = 1;
-				}
-
-				overallSlots[i] = slots;
-			}
-
-			// Check slots
-			int slotsum = 0;
-
-			for (int i : overallSlots)
-			{
-				slotsum += i;
-			}
-
-			if (slotsum < generationSize)
-			{
-				overallSlots[0] += (generationSize - slotsum);
-			}
+			int averageChilds = (int)(generationSize/oldGenSize);
 
 			int resultCursor = 0;
 			for (int i = 0; i < oldGenSize; i++)
 			{
+				int childs = averageChilds;
+				
+				if(i == 0)
+				{
+					childs += (generationSize - averageChilds*oldGenSize);
+				}
+				
 				int j = 0;
-				for (; j < overallSlots[i]; j++)
+				for (; j < childs; j++)
 				{
 					if (!(j + resultCursor < generationSize)) // Could get out of bounds otherwise
 					{
@@ -326,6 +291,67 @@ public class EACore
 
 		return result;
 	}
+			
+//			int overallFileSize = 0; // The quality of the whole generation (all qualities added up)
+//
+//			// Calculate overall quality
+//			for (EAIndividual i : generation)
+//			{
+//				overallFileSize += i.getFileSize();
+//			}
+//
+//			// Calculate slots
+//			for (int i = 0; i < oldGenSize; i++)
+//			{
+//				int slots = (int) (generationSize / oldGenSize + 0.5);
+//
+//				if (overallFileSize > 0)
+//				{
+//					double qualityRelation = 1.0;
+//					qualityRelation = (1.0 / overallFileSize) * generation.get(i).getFileSize();
+//
+//					double slotRelation = (1.0 / oldGenSize) * generationSize; // 1 + 1 - (1.0 / generationSize) *
+//																				// oldGenSize;
+//					slots = (int) ((generationSize * qualityRelation) * slotRelation + 0.5);
+//				}
+//
+//				if (slots == 0)
+//				{
+//					slots = 1;
+//				}
+//
+//				overallSlots[i] = slots;
+//			}
+//
+//			// Check slots
+//			int slotsum = 0;
+//
+//			for (int i : overallSlots)
+//			{
+//				slotsum += i;
+//			}
+//
+//			if (slotsum < generationSize)
+//			{
+//				overallSlots[0] += (generationSize - slotsum);
+//			}
+//
+//			int resultCursor = 0;
+//			for (int i = 0; i < oldGenSize; i++)
+//			{
+//				int j = 0;
+//				for (; j < overallSlots[i]; j++)
+//				{
+//					if (!(j + resultCursor < generationSize)) // Could get out of bounds otherwise
+//					{
+//						break;
+//					}
+//
+//					result[j + resultCursor] = mutate(generation.get(i));
+//				}
+//
+//				resultCursor += j; // Increase the position by 1 so the last children of this parent will not be overwritten by
+//									// the first children of the next parent
 
 	private void wipeGeneration()
 	{
