@@ -61,6 +61,23 @@ public class ImgWriter
 			Program.LOGGER.warning("Image could not be written optimized! File: " + path.getAbsolutePath() + " Error: " + e.getMessage());
 		}
 	}
+	
+	public static void writePositionsFile(ImageSet2D set, File destination)
+	{
+		String text = ImageSet2D.createPositionsString(set.getPositions());
+		
+		try
+		{
+			BufferedWriter w = Files.newBufferedWriter(destination.toPath(), Charset.defaultCharset());
+			w.write(text);
+			w.flush();
+			w.close();
+		}
+		catch (IOException e)
+		{
+			Program.LOGGER.warning("Writing of positions file failed! ERROR: " + e.getMessage());
+		}
+	}
 
 	public static void writeCSSFile(EAIndividual individual, File path)
 	{

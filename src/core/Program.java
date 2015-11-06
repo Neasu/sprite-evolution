@@ -39,6 +39,7 @@ public class Program
 	private static File			optimizerPath			= null;
 	private static File			workingDirectory		= null;
 	private static File			reportPath				= null;
+	private static File			initialSetPath			= null;
 
 	private XMLReport			report					= null;
 
@@ -116,7 +117,25 @@ public class Program
 		}
 
 		// Create starting set
-		ImageSet2D startingSet = new ImageSet2D(sourceImages, columns);
+		ImageSet2D startingSet = null;
+		
+		if(initialSetPath != null)
+		{
+			int[][] positions = ImageSet2D.parsePositions(ImgLoader.readTextFile(initialSetPath));
+			
+			if (positions != null)
+			{
+				startingSet = new ImageSet2D(sourceImages, positions);
+			}
+			else
+			{
+				return 1;
+			}
+		}
+		else
+		{
+			startingSet = new ImageSet2D(sourceImages, columns);
+		}
 
 		// Randomize starting set if option is set
 		if (randomize)
@@ -144,6 +163,20 @@ public class Program
 
 		// Write starting set
 		ImgWriter.writeOptimized(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "/startingSet.png"), 4);
+		
+		// Write starting set positions
+		ImgWriter.writePositionsFile(startingSet, new File(destinationDirectory.getAbsolutePath() + "/startingSet.txt"));
+		
+		// Calculate starting set file size
+		int startingSetFileSize = ImgLoader.getImageFileSize(startingSet.getFullImage());
+		
+		// Adding starting set to report
+		if (createReport)
+		{
+			XMLReportGenerationEntry entry = new XMLReportGenerationEntry(0, generationSize, startingSetFileSize, 0);
+
+			report.addEntry(entry);
+		}
 
 		// Log configuration
 		LOGGER.info("Starting EA with: " + String.format(
@@ -152,7 +185,6 @@ public class Program
 				maxGenerationCount, generationSize, mutationChance, mutationRate, macroMutationChance, macroMutationRate, selectionRate, randomize, createReport, mindStagnation));
 
 		// Log starting set size
-		int startingSetFileSize = ImgLoader.getImageFileSize(startingSet.getFullImage());
 		LOGGER.info("Size of starting set: " + String.format("%08d", startingSetFileSize));
 
 		EACore core = new EACore(generationSize, maxGenerationCount, mutationRate, mutationChance, selectionRate, macroMutationChance, macroMutationRate, new EAIndividual(startingSet));
@@ -190,7 +222,7 @@ public class Program
 				ImgWriter.writeOptimized(core.getGeneration()[0].getData().getFullImage(),
 						new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)), 4);
 
-				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d Increase: %08d NEW BEST", genCount + 1, bestIndividualFileSize,
+				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d Increase: %08d NEW BEST", genCount, bestIndividualFileSize,
 						fileSizeIncrease, bestIndividualFileSize, totalFileSizeIncrease));
 
 				lastTotalBestFileSize = bestIndividualFileSize;
@@ -198,7 +230,7 @@ public class Program
 			}
 			else
 			{
-				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d", genCount + 1, bestIndividualFileSize, fileSizeIncrease, lastTotalBestFileSize));
+				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d", genCount, bestIndividualFileSize, fileSizeIncrease, lastTotalBestFileSize));
 
 				generationsWithoutIncrease++; // Increment
 			}
@@ -725,7 +757,27 @@ public class Program
 		{
 			mindStagnation = true;
 		}
-
+		
+		/**
+		 * Reading initialset
+		 */
+		if(cmd.hasOption("initialset"))
+		{
+			try
+			{
+				initialSetPath = new File(cmd.getOptionValue("initialset"));
+				
+				if(initialSetPath.isDirectory() || !initialSetPath.exists())
+				{
+					throw new Exception();
+				}
+			}
+			catch (Exception e)
+			{
+				LOGGER.warning("The path to the initial set is invalid!");
+			}
+		}
+		
 		return true;
 	}
 
@@ -772,14 +824,16 @@ public class Program
 		options.addOption(Option.builder("macmutrat").longOpt("macromutationrate").desc("The rate of a macro mutation from generation to generation. Standard: 0.1").hasArg()
 				.argName("MacroMutationRate").build());
 
-		options.addOption(Option.builder("r").longOpt("randomize").desc("Determines if the input should be randomized before the algorithm starts.").build());
+		options.addOption(Option.builder("r").longOpt("randomize").desc("Determines if the input should be randomized before the algorithm starts.").argName("Randomize").build());
 
-		options.addOption(Option.builder().longOpt("createreport").desc("Determines if a xml report is generated.").build());
+		options.addOption(Option.builder().longOpt("createreport").desc("Determines if a xml report is generated.").argName("CreateReport").build());
 
-		options.addOption(Option.builder().longOpt("reportpath").desc("The path to the directory where the report file should be saved.").hasArg().build());
+		options.addOption(Option.builder().longOpt("reportpath").desc("The path to the directory where the report file should be saved.").argName("ReportPath").hasArg().build());
 
 		options.addOption(
-				Option.builder().longOpt("mindstagnation").desc("Determines if the algorithm should be stopped before reaching the max generation count, when stagnation is detected").build());
+				Option.builder().longOpt("mindstagnation").desc("Determines if the algorithm should be stopped before reaching the max generation count, when stagnation is detected").argName("MindStagnation").build());
+		
+		options.addOption(Option.builder().longOpt("initialset").desc("The Path to a text file with position data matching the source pictures, to use as the starting point.").argName("IntitialSet").hasArg().build());
 
 	}
 

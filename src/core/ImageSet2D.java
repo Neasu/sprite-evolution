@@ -57,6 +57,88 @@ public class ImageSet2D
 		
 		initialize(images, tempPositions);
 	}
+	
+	public static int[][] parsePositions(String s)
+	{
+		if(s == "" || s == null)
+		{
+			return null;
+		}
+		
+		int tempPos[][] = null;
+		
+		try
+		{
+			String[] lines = s.split("\n");
+			
+			int[] indizes = new int[lines.length];
+			int[] xCoords = new int[lines.length];
+			int[] yCoords = new int[lines.length];
+			
+			int maxXCoord = 0;
+			int maxYCoord = 0;
+			
+			for (int i = 0; i < lines.length; i++)
+			{
+				String[] split1 = lines[i].split(":");
+				String[] split2 = split1[0].split(",");
+				
+				indizes[i] = Integer.parseInt(split1[1]);
+				xCoords[i] = Integer.parseInt(split2[0]);
+				yCoords[i] = Integer.parseInt(split2[1]);
+				
+				if(xCoords[i] > maxXCoord)
+				{
+					maxXCoord = xCoords[i];
+				}
+				
+				if(yCoords[i] > maxYCoord)
+				{
+					maxYCoord = yCoords[i];
+				}
+			}
+			
+			if((maxXCoord + 1) * (maxYCoord + 1) != indizes.length)
+			{
+				Program.LOGGER.warning("Indizes count don't match.");
+				return null;
+			}
+			
+			tempPos = new int[maxYCoord + 1][maxXCoord + 1];
+			
+			for (int i = 0; i < lines.length; i++)
+			{
+				tempPos[yCoords[i]][xCoords[i]] = indizes[i];
+			}
+		}
+		catch (Exception e)
+		{
+			Program.LOGGER.warning("Parsing of position string failed due to: " + e.getMessage());
+			return null;
+		}
+		
+		return tempPos;
+	}
+	
+	public static String createPositionsString(int[][] positions)
+	{
+		if(positions == null || positions[0] == null)
+		{
+			return "";
+		}
+		
+		String result = "";
+		
+		for (int i = 0; i < positions[0].length; i++)
+		{
+			for (int j = 0; j < positions.length; j++)
+			{
+				result += i + "," + j + ":" + positions[j][i] + "\n";
+			}
+		}
+		
+		return result;
+	}
 
 	private void initialize(Image[] images, int[][] positions)
 	{

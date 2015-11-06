@@ -1,6 +1,7 @@
 package io;
 
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -19,12 +20,15 @@ public class ImgLoader
 	// Variables
 	// Constructors
 	// Methods
-	
+
 	/**
 	 * Loads a set of images
-	 * @param paths	The paths to the image files
+	 * 
+	 * @param paths
+	 *            The paths to the image files
 	 * @return All loaded images
-	 * @throws Exception When an IOException occurred or images with different resolutions were detected
+	 * @throws Exception
+	 *             When an IOException occurred or images with different resolutions were detected
 	 */
 	public static Image[] loadImageSet(File[] paths) throws Exception
 	{
@@ -55,7 +59,6 @@ public class ImgLoader
 		return imgs;
 	}
 
-	
 	public static Image loadImage(File path) throws IOException
 	{
 		Image img = null;
@@ -97,41 +100,64 @@ public class ImgLoader
 
 		return files;
 	}
-	
+
 	public static int getImageFileSizeNonOptimized(BufferedImage image)
 	{
 		BufferedImage img = image;
 		int size = 0;
-		
-		try(ByteArrayOutputStream tmp = new ByteArrayOutputStream())
+
+		try (ByteArrayOutputStream tmp = new ByteArrayOutputStream())
 		{
-		    ImageIO.write(img, "png", tmp);
-		    size = tmp.size();
+			ImageIO.write(img, "png", tmp);
+			size = tmp.size();
 		}
-		catch(Exception e)
+		catch (Exception e)
 		{
 			// TODO
 		}
-		
-		return size; 
+
+		return size;
 	}
 
-
 	public static int getImageFileSize(BufferedImage image)
+	{
+		File tempFile = new File(Program.getWorkingDirectory(), "a.png");
+		int size = 0;
+		try
 		{
-			File tempFile = new File(Program.getWorkingDirectory(), "a.png");
-		    int size = 0;
-		    try
-			{
-				ImgWriter.writeOptimized(image, tempFile);
-	
-				size = (int) tempFile.length();
-			}
-			catch (Exception e)
-			{
-				Program.LOGGER.warning("Calculating of optimized image file size failed due to: " + e.getMessage());
-			}
-		    
-		    return size;
+			ImgWriter.writeOptimized(image, tempFile);
+
+			size = (int) tempFile.length();
 		}
+		catch (Exception e)
+		{
+			Program.LOGGER.warning("Calculating of optimized image file size failed due to: " + e.getMessage());
+		}
+
+		return size;
+	}
+	
+	public static String readTextFile(File path)
+	{
+		String text = "";
+		
+		try
+		{
+			BufferedReader rd = Files.newBufferedReader(path.toPath());
+			
+			String line;
+			
+			while((line = rd.readLine()) != null)
+			{
+				text += line + "\n";
+			}
+		}
+		catch (Exception e)
+		{
+			Program.LOGGER.warning("Could not read in text file: " + path.getAbsolutePath() + " ERROR: " + e.getMessage());
+			return null;
+		}
+		
+		return text;
+	}
 }

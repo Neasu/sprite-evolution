@@ -18,7 +18,7 @@ public class EACore
 	// Config
 	private int						generationSize		= 0;
 	private double					selectionRate		= 0.0;
-	private int						generationCount		= 0;
+	private int						generationCount		= 1;
 	private int						maxGenerationCount	= 0;
 	private double					mutationRate		= 0.0;
 	private double					mutationChance		= 0.0;
