@@ -2,6 +2,7 @@ package core;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Random;
@@ -523,7 +524,15 @@ public class Program
 		 * OptimizerPath
 		 */
 
-		optimizerPath = new File("optipng.exe");
+		try
+		{
+			optimizerPath = new File(Program.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath() + "optipng.exe");
+		}
+		catch (URISyntaxException e1)
+		{
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		};
 
 		if (cmd.hasOption("op"))
 		{
