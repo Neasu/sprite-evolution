@@ -56,6 +56,7 @@ public class Program
 	private static boolean		randomize				= false;
 	private static boolean		createReport			= false;
 	private static boolean		mindStagnation			= false;
+	private static boolean 		writeEveryNewBest		= false;
 
 	private File[]				sourceFiles				= null;
 	private Image[]				sourceImages			= null;
@@ -118,11 +119,11 @@ public class Program
 
 		// Create starting set
 		ImageSet2D startingSet = null;
-		
-		if(initialSetPath != null)
+
+		if (initialSetPath != null)
 		{
 			int[][] positions = ImageSet2D.parsePositions(ImgLoader.readTextFile(initialSetPath));
-			
+
 			if (positions != null)
 			{
 				startingSet = new ImageSet2D(sourceImages, positions);
@@ -163,13 +164,13 @@ public class Program
 
 		// Write starting set
 		ImgWriter.writeOptimized(startingSet.getFullImage(), new File(destinationDirectory.getAbsolutePath() + "/startingSet.png"), 4);
-		
+
 		// Write starting set positions
 		ImgWriter.writePositionsFile(startingSet, new File(destinationDirectory.getAbsolutePath() + "/startingSet.txt"));
-		
+
 		// Calculate starting set file size
 		int startingSetFileSize = ImgLoader.getImageFileSize(startingSet.getFullImage());
-		
+
 		// Adding starting set to report
 		if (createReport)
 		{
@@ -219,9 +220,12 @@ public class Program
 			{
 				int totalFileSizeIncrease = lastTotalBestFileSize - bestIndividualFileSize;
 
-				ImgWriter.writeOptimized(core.getGeneration()[0].getData().getFullImage(),
-						new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)), 4);
-
+				if (writeEveryNewBest)
+				{
+					ImgWriter.writeOptimized(core.getGeneration()[0].getData().getFullImage(),
+							new File(destinationDirectory.getAbsolutePath() + String.format("\\Generation %04d - NewBest.png", genCount)), 4);
+				}
+				
 				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d Increase: %08d NEW BEST", genCount, bestIndividualFileSize,
 						fileSizeIncrease, bestIndividualFileSize, totalFileSizeIncrease));
 
@@ -230,7 +234,8 @@ public class Program
 			}
 			else
 			{
-				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d", genCount, bestIndividualFileSize, fileSizeIncrease, lastTotalBestFileSize));
+				LOGGER.info(String.format("Generation: %04d | Best Indiv. of Gen.: %08d Increase: %08d | Total best: %08d", genCount, bestIndividualFileSize, fileSizeIncrease,
+						lastTotalBestFileSize));
 
 				generationsWithoutIncrease++; // Increment
 			}
@@ -757,17 +762,17 @@ public class Program
 		{
 			mindStagnation = true;
 		}
-		
+
 		/**
 		 * Reading initialset
 		 */
-		if(cmd.hasOption("initialset"))
+		if (cmd.hasOption("initialset"))
 		{
 			try
 			{
 				initialSetPath = new File(cmd.getOptionValue("initialset"));
-				
-				if(initialSetPath.isDirectory() || !initialSetPath.exists())
+
+				if (initialSetPath.isDirectory() || !initialSetPath.exists())
 				{
 					throw new Exception();
 				}
@@ -778,6 +783,14 @@ public class Program
 			}
 		}
 		
+		/*
+		 * Reading writeEveryNewBest
+		 */
+		if(cmd.hasOption("writeeverynewbest"))
+		{
+			writeEveryNewBest = true;
+		}
+
 		return true;
 	}
 
@@ -830,10 +843,14 @@ public class Program
 
 		options.addOption(Option.builder().longOpt("reportpath").desc("The path to the directory where the report file should be saved.").argName("ReportPath").hasArg().build());
 
-		options.addOption(
-				Option.builder().longOpt("mindstagnation").desc("Determines if the algorithm should be stopped before reaching the max generation count, when stagnation is detected").argName("MindStagnation").build());
-		
-		options.addOption(Option.builder().longOpt("initialset").desc("The Path to a text file with position data matching the source pictures, to use as the starting point.").argName("IntitialSet").hasArg().build());
+		options.addOption(Option.builder().longOpt("mindstagnation").desc("Determines if the algorithm should be stopped before reaching the max generation count, when stagnation is detected")
+				.argName("MindStagnation").build());
+
+		options.addOption(Option.builder().longOpt("initialset").desc("The Path to a text file with position data matching the source pictures, to use as the starting point.")
+				.argName("IntitialSet").hasArg().build());
+
+		options.addOption(Option.builder().longOpt("writeeverynewbest").desc("Determines if every time the algorithm finds a new best individual, it is written to the output folder.")
+				.argName("WriteEveryNewBest").build());
 
 	}
 
