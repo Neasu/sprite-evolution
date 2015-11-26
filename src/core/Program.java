@@ -526,7 +526,8 @@ public class Program
 
 		try
 		{
-			optimizerPath = new File(Program.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath() + "optipng.exe");
+			File jarpath = new File(Program.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+			optimizerPath = new File(jarpath.getParent() + "/optipng.exe");
 		}
 		catch (URISyntaxException e1)
 		{
@@ -554,7 +555,12 @@ public class Program
 				LOGGER.warning("Optimizer path is invalid.");
 				return false;
 			}
-
+		}
+		
+		if(!optimizerPath.exists())
+		{
+			LOGGER.severe("Optipng.exe not found! Path: " + optimizerPath.getAbsolutePath());
+			return false;
 		}
 
 		/*
